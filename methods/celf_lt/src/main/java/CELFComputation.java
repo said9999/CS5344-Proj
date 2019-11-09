@@ -2,23 +2,62 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class CELFComputation {
-    public static Set<Long> doCELF(Set<Long> candidateSet, Map<Long, Map<Long, Float>> nodeWeightMap) {
-        Set<Long> resultSet = new HashSet<>();
+    public static final int currentCandidateSetSize = 300;
+    public static final int seedSetSize = 100;
+
+    public static Set<Long> doCELF(Map<Long, Map<Long, Float>> nodeWeightMap, Map<Long, Integer> nodeEdgeCountMap) {
+        Set<Long> candidateSet = getCandidateSet(nodeEdgeCountMap);
         Map<Long, Set<Long>> currentExpansions = new HashMap<>();
+        Map<Long, Integer> marginGainMap = new HashMap<>();
+        Long startTime = System.currentTimeMillis();
         Set<Long> seedSet = new HashSet<>();
+        int currentExpansionSize;
         candidateSet.parallelStream().forEach(node -> {
             Set<Long> tempSet = new HashSet<>(seedSet);
-            seedSet.add(node);
-            currentExpansions.put(node, IndependentCascade.doIndependentCascade(seedSet, nodeWeightMap));
+            tempSet.add(node);
+            marginGainMap.put(node, IndependentCascade.doIndependentCascade(tempSet, nodeWeightMap).size());
         });
-        List<Long> sortedByScoreSet = currentExpansions.entrySet().stream()
-                .sorted(Comparator.comparingInt(k -> currentExpansions.get(k).size()).reversed())
-                .map(k -> k.getKey()).collect(Collectors.toList());
-        seedSet.add(sortedByScoreSet.get(0));
-        candidateSet.remove(sortedByScoreSet.get(0));
-        while (resultSet.size() < ComputeIM.seedSetSize) {
 
+        List<Long> seedList = currentExpansions.entrySet().stream()
+                .sorted(Comparator.comparingInt(k -> k.getValue().size()))
+                .map(k -> k.getKey()).collect(Collectors.toList());
+        Long seed = seedList.get(0);
+
+        out:
+        while (seedSet.size() < seedSetSize) {
+            int marginGain = marginGainMap.get(seed);
+            seedSet.add(seed);
+            currentExpansions.remove(seed);
+            candidateSet.remove(seed);
+            marginGainMap.remove(seed);
+
+            for (Long node : seedSet) {
+                Set<Long> tempSet = new HashSet<>(seedSet);
+                tempSet.add(node);
+                Set<Long> result = IndependentCascade.doIndependentCascade(tempSet, nodeWeightMap);
+                currentExpansions.put(node, result);
+                int marginGainCurrentNode = result.size() - marginGain;
+                if (marginGain > marginGainMap.get(seedList.get(0))) {
+                    seed = node;
+                    continue out;
+                }
+                marginGainMap.put(node, marginGainCurrentNode);
+            }
+            seedList = marginGainMap.entrySet().stream()
+                    .sorted(Comparator.comparingInt(k -> k.getValue()))
+                    .map(k -> k.getKey()).collect(Collectors.toList());
+            seed = seedList.get(0);
         }
-        return resultSet;
+
+        currentExpansionSize = currentExpansions.get(seed).size();
+        System.out.println(seedSet);
+        System.out.println(currentExpansionSize);
+        System.out.println("Completed one iteration, spent: " + (System.currentTimeMillis() - startTime) + "ms");
+        return seedSet;
+    }
+
+    private static Set<Long> getCandidateSet(Map<Long, Integer> nodeEdgeCountMap) {
+        Set<Long> candidateSet = nodeEdgeCountMap.keySet().stream().sorted(Comparator.comparingInt(nodeEdgeCountMap::get).reversed()).limit(currentCandidateSetSize).collect(Collectors.toSet());
+        return candidateSet;
     }
 }
