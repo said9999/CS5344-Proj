@@ -4,15 +4,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class IndependentCascade {
+public class LinearThreshold {
 
-    Set<Long> visitedSet = new HashSet<>();
-
-    public static Set<Long> doIndependentCascade(Set<Long> seedSet, Map<Long, Map<Long, Float>> inputNodeMap) {
+    public static Set<Long> doLinearThreshold(Long key, Map<Long, Map<Long, Float>> inputNodeMap) {
         Set<Long> returnActivatedSet = new HashSet<>();
-        Set<Long> visitedSet = new HashSet<>();
         Set<Long> activatedSet = new HashSet<>();
-        activatedSet.addAll(seedSet);
+        Set<Long> visitedSet = new HashSet<>();
+        activatedSet.add(key);
         do {
             Map<Long, Float> concurrentNodeValueMap = new ConcurrentHashMap<>();
             activatedSet.parallelStream().forEach(l -> {
