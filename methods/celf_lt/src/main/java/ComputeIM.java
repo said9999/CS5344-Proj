@@ -9,7 +9,8 @@ public class ComputeIM {
         Map<Long, Map<Long, Float>> nodeWeightMap = TwitterCombinedReader.getNodeMapFromFile(weightPath);
         Map<Long, Integer> weightMap = nodeWeightMap.keySet().parallelStream().collect(Collectors.toMap(l -> l, l -> nodeWeightMap.get(l).size()));
 
-        Set<Long> resultSet = GreedyComputation.compute(nodeWeightMap, weightMap);
+//        Set<Long> resultSet = GreedyComputation.compute(nodeWeightMap, weightMap);
+        Set<Long> resultSet = CELFComputation.compute(nodeWeightMap, weightMap);
         System.out.println(resultSet);
         System.out.println(System.currentTimeMillis());
     }
