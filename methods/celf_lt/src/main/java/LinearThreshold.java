@@ -6,26 +6,29 @@ import java.util.stream.Collectors;
 
 public class LinearThreshold {
 
-    public static Set<Long> doLinearThreshold(Long key, Map<Long, Map<Long, Float>> inputNodeMap) {
+    public static Set<Long> doLinearThreshold(Set<Long> seedSet, Map<Long, Map<Long, Float>> inputNodeMap) {
         Set<Long> returnActivatedSet = new HashSet<>();
+        Set<Long> visitedSet = ConcurrentHashMap.newKeySet();
         Set<Long> activatedSet = new HashSet<>();
-        Set<Long> visitedSet = new HashSet<>();
-        activatedSet.add(key);
+        activatedSet.addAll(seedSet);
         do {
             Map<Long, Float> concurrentNodeValueMap = new ConcurrentHashMap<>();
             activatedSet.parallelStream().forEach(l -> {
                 Map<Long, Float> linkedMap = inputNodeMap.get(l);
                 if (linkedMap != null) {
                     linkedMap.keySet().parallelStream().filter(k -> !visitedSet.contains(k)).forEach(k -> {
-                        if (concurrentNodeValueMap.get(k) == null) {
-                            concurrentNodeValueMap.put(k, linkedMap.get(k));
-                        } else {
-                            concurrentNodeValueMap.put(k, concurrentNodeValueMap.get(k) + linkedMap.get(k));
+                        synchronized (k) {
+                            if (concurrentNodeValueMap.get(k) == null) {
+                                concurrentNodeValueMap.put(k, linkedMap.get(k));
+                            } else {
+                                concurrentNodeValueMap.put(k, concurrentNodeValueMap.get(k) + linkedMap.get(k));
+                            }
                         }
                     });
-                    visitedSet.addAll(linkedMap.keySet());
                 }
             });
+            activatedSet.parallelStream().filter(l -> inputNodeMap.get(l) != null).forEach(l -> visitedSet.addAll(inputNodeMap.get(l).keySet()));
+//            System.out.println(visitedSet.size());
             activatedSet = concurrentNodeValueMap.keySet().parallelStream().filter(k -> {
                 if (Math.random() > concurrentNodeValueMap.get(k)) {
                     return false;

@@ -8,33 +8,40 @@ public class IndependentCascade {
 
     public static Set<Long> doIndependentCascade(Set<Long> seedSet, Map<Long, Map<Long, Float>> inputNodeMap) {
         Set<Long> returnActivatedSet = new HashSet<>();
-        Set<Long> visitedSet = ConcurrentHashMap.newKeySet();
+        Set<Long> visitedSet = new HashSet<>();
         Set<Long> activatedSet = new HashSet<>();
         activatedSet.addAll(seedSet);
         do {
-            Map<Long, Float> concurrentNodeValueMap = new ConcurrentHashMap<>();
-            activatedSet.parallelStream().forEach(l -> {
-                Map<Long, Float> linkedMap = inputNodeMap.get(l);
+//            activatedSet = activatedSet.stream().flatMap(l -> {
+//                Map<Long, Float> linkedMap = inputNodeMap.get(l);
+//                if (linkedMap != null) {
+//                    return linkedMap.keySet().stream().filter(k -> !visitedSet.contains(k)).filter(k -> {
+//                        visitedSet.add(k);
+//                        if (Math.random() > linkedMap.get(k)) {
+//                            return false;
+//                        }
+//                        return true;
+//                    }).collect(Collectors.toSet()).stream();
+//                }
+//                return new HashSet<Long>().stream();
+//            }).collect(Collectors.toSet());
+            Set<Long> tempSet = new HashSet<>();
+            for (Long seed : activatedSet) {
+                Map<Long, Float> linkedMap = inputNodeMap.get(seed);
                 if (linkedMap != null) {
-                    linkedMap.keySet().parallelStream().filter(k -> !visitedSet.contains(k)).forEach(k -> {
-                        synchronized (k) {
-                            if (concurrentNodeValueMap.get(k) == null) {
-                                concurrentNodeValueMap.put(k, linkedMap.get(k));
-                            } else {
-                                concurrentNodeValueMap.put(k, concurrentNodeValueMap.get(k) + linkedMap.get(k));
+                    for (Long node : linkedMap.keySet()) {
+                        if (!visitedSet.contains(node)) {
+                            visitedSet.add(node);
+                            if (Math.random() < linkedMap.get(node)) {
+                                tempSet.add(node);
                             }
                         }
-                    });
+                    }
                 }
-            });
-            activatedSet.parallelStream().filter(l -> inputNodeMap.get(l) != null).forEach(l -> visitedSet.addAll(inputNodeMap.get(l).keySet()));
+            }
+            activatedSet = tempSet;
+//            System.out.println(activatedSet.size());
 //            System.out.println(visitedSet.size());
-            activatedSet = concurrentNodeValueMap.keySet().parallelStream().filter(k -> {
-                if (Math.random() > concurrentNodeValueMap.get(k)) {
-                    return false;
-                }
-                return true;
-            }).collect(Collectors.toSet());
             returnActivatedSet.addAll(activatedSet);
         } while (activatedSet.size() > 0);
         return returnActivatedSet;
