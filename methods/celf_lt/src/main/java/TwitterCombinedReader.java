@@ -4,9 +4,9 @@ import java.util.Map;
 
 public class TwitterCombinedReader {
 
-    public static Map<Long, Map<Long, Float>> getNodeMapFromFile(String filePath) throws IOException {
+    public static Map<Long, Map<Long, Float>> getNodeMapFromFile(InputStream inputStream) throws IOException {
         Map<Long, Map<Long, Float>> returnNodeMap = new HashMap<>();
-        try (BufferedReader bufferedReader = new BufferedReader((new FileReader(filePath)))) {
+        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
             String line = bufferedReader.readLine();
             while (line != null) {
                 String lines[] = line.split("\\s+");
